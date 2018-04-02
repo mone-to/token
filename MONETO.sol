@@ -12,7 +12,7 @@ contract MONETO is BurnableToken, UpgradeableToken {
   function MONETO(address _owner)  UpgradeableToken(_owner) {
     name = "MONETO";
     symbol = "MTO";
-    totalSupply = 3950000000000000000000000;
+    totalSupply = 39500000000000000000000000;
     decimals = 18;
 
     balances[_owner] = totalSupply;

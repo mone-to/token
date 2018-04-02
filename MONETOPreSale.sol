@@ -12,6 +12,29 @@ contract MONETOPreSale {
     uint public bonus;
     uint public price;    
     uint public minSaleAmount;
+    
+    uint public alfatokenFee;
+    
+     public startTime;
+    uint public endTime;
+    uint public startBlock;
+    
+    Stages public stage;
+    
+    enum Stages {
+        Deployed,
+        SetUp,
+        PreSaleStarted,
+        PreSaleEnded,
+        SaleStarted,
+        SaleEnded,
+        Canceled
+    }
+    
+    modifier atStage(Stages _stage) {
+        require(stage == _stage);
+        _;
+    }
 
     function MONETOPreSale(
         MONETO _token,
@@ -22,8 +45,9 @@ contract MONETOPreSale {
         beneficiary = _beneficiary;
         alfatokenteam = _alfatokenteam;
         bonus = 10;
-        price = 125;
-        minSaleAmount = 50000000000000000000;
+        price = 1250;
+        minSaleAmount = 1000000000000000000;
+        alfatokenFee = 7000000000000000000;
     }
 
     function () payable {
@@ -35,27 +59,35 @@ contract MONETOPreSale {
     }
 
     function TransferETH(address _to, uint _amount) {
-        require(msg.sender == beneficiary || msg.sender == alfatokenteam);
+        require(msg.sender == beneficiary);
+        require(alfatokenFee == 0);
         _to.transfer(_amount);
+    }
+    
+    function TransferFee(address _to, uint _amount) {
+        require(msg.sender == alfatokenteam);
+        require(_amount <= alfatokenFee);
+        _to.transfer(_amount);
+        alfatokenFee -= _amount;
     }
 
     function TransferTokens(address _to, uint _amount) {
-        require(msg.sender == beneficiary || msg.sender == alfatokenteam);
+        require(msg.sender == beneficiary);
         token.transfer(_to, _amount);
     }
 
     function ChangeBonus(uint _bonus) {
-        require(msg.sender == beneficiary || msg.sender == alfatokenteam);
+        require(msg.sender == beneficiary);
         bonus = _bonus;
     }
     
     function ChangePrice(uint _price) {
-        require(msg.sender == beneficiary || msg.sender == alfatokenteam);
+        require(msg.sender == beneficiary);
         price = _price;
     }
     
     function ChangeMinSaleAmount(uint _minSaleAmount) {
-        require(msg.sender == beneficiary || msg.sender == alfatokenteam);
+        require(msg.sender == beneficiary);
         minSaleAmount = _minSaleAmount;
     }
 }
