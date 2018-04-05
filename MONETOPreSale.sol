@@ -44,7 +44,7 @@ contract MONETOPreSale {
         token = MONETO(_token);
         beneficiary = _beneficiary;
         alfatokenteam = _alfatokenteam;
-        bonus = 10;
+        bonus = 35;
         price = 1250;
         minSaleAmount = 1000000000000000000;
         alfatokenFee = 7000000000000000000;
@@ -60,7 +60,7 @@ contract MONETOPreSale {
 
     function TransferETH(address _to, uint _amount) {
         require(msg.sender == beneficiary);
-        require(alfatokenFee == 0);
+        require(_amount <= this.balance - alfatokenFee);
         _to.transfer(_amount);
     }
     
