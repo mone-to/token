@@ -2,20 +2,17 @@ pragma solidity ^0.4.11;
 
 import "./MONETO.sol";
 
-contract MONETOPreSale {
+contract MonetoSale {
     MONETO public token;
     address public beneficiary;
     address public alfatokenteam;
     
     uint public amountRaised;
-    
-    uint public bonus;
-    uint public price;    
+       
     uint public minSaleAmount;
-    
     uint public alfatokenFee;
     
-     public startTime;
+    uint public startTime;
     uint public endTime;
     uint public startBlock;
     
@@ -36,58 +33,53 @@ contract MONETOPreSale {
         _;
     }
 
-    function MONETOPreSale(
-        MONETO _token,
-        address _beneficiary,
-        address _alfatokenteam
-    ) {
-        token = MONETO(_token);
+    modifier isOwner() {
+        require(msg.sender == beneficiary);
+        _;
+    }
+
+    function MonetoSale(address _beneficiary, address _alfatokenteam) public {
         beneficiary = _beneficiary;
         alfatokenteam = _alfatokenteam;
-        bonus = 35;
-        price = 1250;
         minSaleAmount = 1000000000000000000;
         alfatokenFee = 7000000000000000000;
+
+        stage = Stages.Deployed;
     }
 
-    function () payable {
+    function setup(address _token) public isOwner atStage(Stages.Deployed) {
+        require(_token != 0x0);
+        token = MONETO(_token);
+
+        stage = Stages.SetUp;
+    }
+
+    function () payable public {
         uint amount = msg.value;
-        uint tokenAmount = amount * price;
-        if (tokenAmount < minSaleAmount) throw;
+        uint tokenAmount = amount * getPrice();
+        require(tokenAmount > minSaleAmount);
         amountRaised += amount;
-        token.transfer(msg.sender, tokenAmount * (100 + bonus) / 100);
+        token.transfer(msg.sender, tokenAmount + getBonus(tokenAmount));
     }
 
-    function TransferETH(address _to, uint _amount) {
+    function transferETH(address _to, uint _amount) public {
         require(msg.sender == beneficiary);
         require(_amount <= this.balance - alfatokenFee);
         _to.transfer(_amount);
     }
     
-    function TransferFee(address _to, uint _amount) {
+    function transferFee(address _to, uint _amount) public {
         require(msg.sender == alfatokenteam);
         require(_amount <= alfatokenFee);
         _to.transfer(_amount);
         alfatokenFee -= _amount;
     }
 
-    function TransferTokens(address _to, uint _amount) {
-        require(msg.sender == beneficiary);
-        token.transfer(_to, _amount);
+    function getBonus(uint amount) public constant returns (uint) {
+        return amount * 35/100;
     }
 
-    function ChangeBonus(uint _bonus) {
-        require(msg.sender == beneficiary);
-        bonus = _bonus;
-    }
-    
-    function ChangePrice(uint _price) {
-        require(msg.sender == beneficiary);
-        price = _price;
-    }
-    
-    function ChangeMinSaleAmount(uint _minSaleAmount) {
-        require(msg.sender == beneficiary);
-        minSaleAmount = _minSaleAmount;
+    function getPrice() public constant returns (uint) {
+        return 1250;
     }
 }

@@ -1,20 +1,34 @@
 pragma solidity ^0.4.12;
 
-import "./lib/BurnableToken.sol";
-import "./lib/UpgradeableToken.sol";
+import './StandardToken.sol';
 
-contract MONETO is BurnableToken, UpgradeableToken {
+contract MONETO is StandardToken {
+  
+  string constant public name = "MONETO";
+  string constant public symbol = "MTO";
+  uint8 constant public decimals = 18;
 
-  string public name;
-  string public symbol;
-  uint public decimals;
+  function MONETO(address saleAddress) public {
+    require(saleAddress != 0x0);
 
-  function MONETO(address _owner)  UpgradeableToken(_owner) {
-    name = "MONETO";
-    symbol = "MTO";
     totalSupply = 39500000000000000000000000;
-    decimals = 18;
+    balances[saleAddress] = totalSupply;
+    Transfer(0x0, saleAddress, totalSupply);
 
-    balances[_owner] = totalSupply;
+    assert(totalSupply == balances[saleAddress]);
+  }
+
+  function burn(uint num) public {
+    require(num > 0);
+    require(balances[msg.sender] >= num);
+    require(totalSupply >= num);
+
+    uint preBalance = balances[msg.sender];
+
+    balances[msg.sender] -= num;
+    totalSupply -= num;
+    Transfer(msg.sender, 0x0, num);
+
+    assert(balances[msg.sender] == preBalance - num);
   }
 }
