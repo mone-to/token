@@ -7,12 +7,10 @@ contract MonetoSale {
 
     address public beneficiary;
     address public alfatokenteam;
+    uint public alfatokenFee;
     
     uint public amountRaised;
     uint public tokenSaled;
-       
-    uint public minSaleAmount;
-    uint public alfatokenFee;
     
     uint public preSaleStart;
     uint public preSaleEnd;
