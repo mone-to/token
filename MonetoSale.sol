@@ -1,27 +1,29 @@
 pragma solidity ^0.4.11;
 
-import "./MONETO.sol";
+import "./Moneto.sol";
 
 contract MonetoSale {
-    MONETO public token;
+    Moneto public token;
 
     address public beneficiary;
     address public alfatokenteam;
     uint public alfatokenFee;
     
     uint public amountRaised;
-    uint public tokenSaled;
+    uint public tokenSold;
     
     uint public preSaleStart;
     uint public preSaleEnd;
     uint public saleStart;
     uint public saleEnd;
+
+    mapping (address => uint) public icoBuyers;
     
     Stages public stage;
     
     enum Stages {
         Deployed,
-        SetUp,
+        Ready,
         Ended,
         Canceled
     }
@@ -39,37 +41,50 @@ contract MonetoSale {
     function MonetoSale(address _beneficiary, address _alfatokenteam) public {
         beneficiary = _beneficiary;
         alfatokenteam = _alfatokenteam;
-        alfatokenFee = 7000000000000000000;
+        alfatokenFee = 7 ether;
 
         stage = Stages.Deployed;
     }
 
     function setup(address _token) public isOwner atStage(Stages.Deployed) {
         require(_token != 0x0);
-        token = MONETO(_token);
+        token = Moneto(_token);
 
-        preSaleStart = 1523318400; // 10 April 2018, 00:00:00 GMT
-        preSaleEnd = 1525910399; // 9 May 2018, 23:59:59 GMT
-        saleStart = 1528588800; // 10 June 2018,00:00:00 GMT
-        saleEnd = 1531180799; // 9 July 2018, 23:59:59 GMT
+        preSaleStart = 1523952000; // 17 April 2018, 08:00:00 GMT
+        preSaleEnd = 1526543999; // 17 May 2018, 07:59:59 GMT
+        saleStart = 1528617600; // 10 June 2018,08:00:00 GMT
+        saleEnd = 1531209599; // 10 July 2018, 07:59:59 GMT
 
-        stage = Stages.SetUp;
+        stage = Stages.Ready;
     }
 
-    function () payable public {
-        require((now >= preSaleStart && now <= preSaleEnd) || (now >= saleStart && now <= preSaleEnd));
-        
+    function () payable public atStage(Stages.Ready) {
+        require((now >= preSaleStart && now <= preSaleEnd) || (now >= saleStart && now <= saleEnd));
+
         uint amount = msg.value;
         amountRaised += amount;
 
+        if (now >= saleStart && now <= saleEnd) {
+            assert(icoBuyers[msg.sender] + msg.value >= msg.value);
+            icoBuyers[msg.sender] += amount;
+        }
+        
         uint tokenAmount = amount * getPrice();
         require(tokenAmount > getMinimumAmount());
         uint allTokens = tokenAmount + getBonus(tokenAmount);
+        tokenSold += allTokens;
+
+        if (now >= preSaleStart && now <= preSaleEnd) {
+            require(tokenSold <= 2531250 * 10**18);
+        }
+        if (now >= saleStart && now <= saleEnd) {
+            require(tokenSold <= 300312502 * 10**17);
+        }
+
         token.transfer(msg.sender, allTokens);
-        tokenSaled += allTokens;
     }
 
-    function transferETH(address _to, uint _amount) public isOwner {
+    function transferEter(address _to, uint _amount) public isOwner {
         require(_amount <= this.balance - alfatokenFee);
         require(now < saleStart || stage == Stages.Ended);
         
@@ -80,27 +95,46 @@ contract MonetoSale {
         require(msg.sender == alfatokenteam);
         require(_amount <= alfatokenFee);
 
-        _to.transfer(_amount);
         alfatokenFee -= _amount;
+        _to.transfer(_amount);
     }
 
     function endSale(address _to) public isOwner {
         require(amountRaised >= 2500 ether);
 
-        token.transfer(_to, tokenSaled*30/100);
+        token.transfer(_to, tokenSold*3/7);
         token.burn(token.balanceOf(address(this)));
 
         stage = Stages.Ended;
     }
 
-    function cancelSale() public isOwner {
+    function cancelSale() public {
         require(amountRaised < 2500 ether);
-        require(now > saleStart);
+        require(now > saleEnd);
 
         stage = Stages.Canceled;
     }
 
-    function getBonus(uint amount) public constant returns (uint) {
+    function takeEterBack() public atStage(Stages.Canceled) returns (bool) {
+        return proxyTakeEterBack(msg.sender);
+    }
+
+    function proxyTakeEterBack(address receiverAddress) public atStage(Stages.Canceled) returns (bool) {
+        require(receiverAddress != 0x0);
+        
+        if (icoBuyers[receiverAddress] == 0) {
+            return false;
+        }
+
+        uint amount = icoBuyers[receiverAddress];
+        icoBuyers[receiverAddress] = 0;
+        receiverAddress.transfer(amount);
+
+        assert(icoBuyers[receiverAddress] == 0);
+        return true;
+    }
+
+    function getBonus(uint amount) public view returns (uint) {
         if (now >= preSaleStart && now <= preSaleEnd) {
             uint w = now - preSaleStart;
             if (w <= 1 weeks) {
@@ -130,7 +164,7 @@ contract MonetoSale {
         return 0;
     }
 
-    function getPrice() public constant returns (uint) {
+    function getPrice() public view returns (uint) {
         if (now >= preSaleStart && now <= preSaleEnd) {
             return 1250;
         }
@@ -140,12 +174,12 @@ contract MonetoSale {
         return 0;
     }
 
-    function getMinimumAmount() public constant returns (uint) {
+    function getMinimumAmount() public view returns (uint) {
         if (now >= preSaleStart && now <= preSaleEnd) {
-            return 50000000000000000000;
+            return 10 * 10**18;
         }
         if (now >= saleStart && now <= saleEnd) {
-            return 1000000000000000000;
+            return 1 * 10**18;
         }
         return 0;
     }

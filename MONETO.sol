@@ -2,16 +2,16 @@ pragma solidity ^0.4.12;
 
 import './StandardToken.sol';
 
-contract MONETO is StandardToken {
+contract Moneto is StandardToken {
   
-  string constant public name = "MONETO";
-  string constant public symbol = "MTO";
-  uint8 constant public decimals = 18;
+  string public name = "Moneto";
+  string public symbol = "MTO";
+  uint8 public decimals = 18;
 
-  function MONETO(address saleAddress) public {
+  function Moneto(address saleAddress) public {
     require(saleAddress != 0x0);
 
-    totalSupply = 39500000000000000000000000;
+    totalSupply = 42901786 * 10**18;
     balances[saleAddress] = totalSupply;
     Transfer(0x0, saleAddress, totalSupply);
 
