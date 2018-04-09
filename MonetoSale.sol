@@ -12,13 +12,34 @@ contract MonetoSale {
     uint public amountRaised;
     uint public tokenSold;
     
-    uint public preSaleStart;
-    uint public preSaleEnd;
-    uint public saleStart;
-    uint public saleEnd;
+    uint public constant PRE_SALE_START = 1523952000; // 17 April 2018, 08:00:00 GMT
+    uint public constant PRE_SALE_END = 1526543999; // 17 May 2018, 07:59:59 GMT
+    uint public constant SALE_START = 1528617600; // 10 June 2018,08:00:00 GMT
+    uint public constant SALE_END = 1531209599; // 10 July 2018, 07:59:59 GMT
 
-    mapping (address => uint) public icoBuyers;
+    uint public constant PRE_SALE_MAX_CAP = 2531250 * 10**18;
+    uint public constant SALE_MAX_CAP = 300312502 * 10**17;
+
+    uint public constant SALE_MIN_CAP = 2500 ether;
+
+    uint public constant PRE_SALE_PRICE = 1250;
+    uint public constant SALE_PRICE = 1000;
+
+    uint public constant PRE_SALE_MIN_BUY = 10 * 10**18;
+    uint public constant SALE_MIN_BUY = 1 * 10**18;
+
+    uint public constant PRE_SALE_1WEEK_BONUS = 35;
+    uint public constant PRE_SALE_2WEEK_BONUS = 15;
+    uint public constant PRE_SALE_3WEEK_BONUS = 5;
+    uint public constant PRE_SALE_4WEEK_BONUS = 0;
+
+    uint public constant SALE_1WEEK_BONUS = 10;
+    uint public constant SALE_2WEEK_BONUS = 7;
+    uint public constant SALE_3WEEK_BONUS = 5;
+    uint public constant SALE_4WEEK_BONUS = 3;
     
+    mapping (address => uint) public icoBuyers;
+
     Stages public stage;
     
     enum Stages {
@@ -50,21 +71,16 @@ contract MonetoSale {
         require(_token != 0x0);
         token = Moneto(_token);
 
-        preSaleStart = 1523952000; // 17 April 2018, 08:00:00 GMT
-        preSaleEnd = 1526543999; // 17 May 2018, 07:59:59 GMT
-        saleStart = 1528617600; // 10 June 2018,08:00:00 GMT
-        saleEnd = 1531209599; // 10 July 2018, 07:59:59 GMT
-
         stage = Stages.Ready;
     }
 
     function () payable public atStage(Stages.Ready) {
-        require((now >= preSaleStart && now <= preSaleEnd) || (now >= saleStart && now <= saleEnd));
+        require((now >= PRE_SALE_START && now <= PRE_SALE_END) || (now >= SALE_START && now <= SALE_END));
 
         uint amount = msg.value;
         amountRaised += amount;
 
-        if (now >= saleStart && now <= saleEnd) {
+        if (now >= SALE_START && now <= SALE_END) {
             assert(icoBuyers[msg.sender] + msg.value >= msg.value);
             icoBuyers[msg.sender] += amount;
         }
@@ -74,19 +90,19 @@ contract MonetoSale {
         uint allTokens = tokenAmount + getBonus(tokenAmount);
         tokenSold += allTokens;
 
-        if (now >= preSaleStart && now <= preSaleEnd) {
-            require(tokenSold <= 2531250 * 10**18);
+        if (now >= PRE_SALE_START && now <= PRE_SALE_END) {
+            require(tokenSold <= PRE_SALE_MAX_CAP);
         }
-        if (now >= saleStart && now <= saleEnd) {
-            require(tokenSold <= 300312502 * 10**17);
+        if (now >= SALE_START && now <= SALE_END) {
+            require(tokenSold <= SALE_MAX_CAP);
         }
 
         token.transfer(msg.sender, allTokens);
     }
 
-    function transferEter(address _to, uint _amount) public isOwner {
+    function transferEther(address _to, uint _amount) public isOwner {
         require(_amount <= this.balance - alfatokenFee);
-        require(now < saleStart || stage == Stages.Ended);
+        require(now < SALE_START || stage == Stages.Ended);
         
         _to.transfer(_amount);
     }
@@ -100,7 +116,7 @@ contract MonetoSale {
     }
 
     function endSale(address _to) public isOwner {
-        require(amountRaised >= 2500 ether);
+        require(amountRaised >= SALE_MIN_CAP);
 
         token.transfer(_to, tokenSold*3/7);
         token.burn(token.balanceOf(address(this)));
@@ -109,17 +125,17 @@ contract MonetoSale {
     }
 
     function cancelSale() public {
-        require(amountRaised < 2500 ether);
-        require(now > saleEnd);
+        require(amountRaised < SALE_MIN_CAP);
+        require(now > SALE_END);
 
         stage = Stages.Canceled;
     }
 
-    function takeEterBack() public atStage(Stages.Canceled) returns (bool) {
-        return proxyTakeEterBack(msg.sender);
+    function takeEtherBack() public atStage(Stages.Canceled) returns (bool) {
+        return proxyTakeEtherBack(msg.sender);
     }
 
-    function proxyTakeEterBack(address receiverAddress) public atStage(Stages.Canceled) returns (bool) {
+    function proxyTakeEtherBack(address receiverAddress) public atStage(Stages.Canceled) returns (bool) {
         require(receiverAddress != 0x0);
         
         if (icoBuyers[receiverAddress] == 0) {
@@ -135,29 +151,35 @@ contract MonetoSale {
     }
 
     function getBonus(uint amount) public view returns (uint) {
-        if (now >= preSaleStart && now <= preSaleEnd) {
-            uint w = now - preSaleStart;
+        if (now >= PRE_SALE_START && now <= PRE_SALE_END) {
+            uint w = now - PRE_SALE_START;
             if (w <= 1 weeks) {
-                return amount*30/100;
+                return amount * PRE_SALE_1WEEK_BONUS/100;
             }
             if (w > 1 weeks && w <= 2 weeks) {
-                return amount*15/100;
+                return amount * PRE_SALE_2WEEK_BONUS/100;
             }
             if (w > 2 weeks && w <= 3 weeks) {
-                return amount*5/100;
+                return amount * PRE_SALE_3WEEK_BONUS/100;
+            }
+            if (w > 3 weeks && w <= 4 weeks) {
+                return amount * PRE_SALE_4WEEK_BONUS/100;
             }
             return 0;
         }
-        if (now >= saleStart && now <= saleEnd) {
-            uint w2 = now - saleStart;
+        if (now >= SALE_START && now <= SALE_END) {
+            uint w2 = now - SALE_START;
             if (w2 <= 1 weeks) {
-                return amount*10/100;
+                return amount * SALE_1WEEK_BONUS/100;
             }
-            if (w2 > 1 weeks && w <= 2 weeks) {
-                return amount*5/100;
+            if (w2 > 1 weeks && w2 <= 2 weeks) {
+                return amount * SALE_2WEEK_BONUS/100;
             }
-            if (w2 > 2 weeks && w <= 3 weeks) {
-                return amount*3/100;
+            if (w2 > 2 weeks && w2 <= 3 weeks) {
+                return amount * SALE_3WEEK_BONUS/100;
+            }
+            if (w2 > 3 weeks && w2 <= 4 weeks) {
+                return amount * SALE_4WEEK_BONUS/100;
             }
             return 0;
         }
@@ -165,21 +187,21 @@ contract MonetoSale {
     }
 
     function getPrice() public view returns (uint) {
-        if (now >= preSaleStart && now <= preSaleEnd) {
-            return 1250;
+        if (now >= PRE_SALE_START && now <= PRE_SALE_END) {
+            return PRE_SALE_PRICE;
         }
-        if (now >= saleStart && now <= saleEnd) {
-            return 1000;
+        if (now >= SALE_START && now <= SALE_START) {
+            return SALE_PRICE;
         }
         return 0;
     }
 
     function getMinimumAmount() public view returns (uint) {
-        if (now >= preSaleStart && now <= preSaleEnd) {
-            return 10 * 10**18;
+        if (now >= PRE_SALE_START && now <= PRE_SALE_END) {
+            return PRE_SALE_MIN_BUY;
         }
-        if (now >= saleStart && now <= saleEnd) {
-            return 1 * 10**18;
+        if (now >= SALE_START && now <= SALE_START) {
+            return SALE_MIN_BUY;
         }
         return 0;
     }
