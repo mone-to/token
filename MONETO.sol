@@ -1,6 +1,6 @@
 pragma solidity ^0.4.12;
 
-import './StandardToken.sol';
+import './lib/StandardToken.sol';
 
 contract Moneto is StandardToken {
   
